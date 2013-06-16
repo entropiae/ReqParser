@@ -1,11 +1,15 @@
 from collections import namedtuple
 
+a = 1
 
 class ReqParser(object):
     field = namedtuple('Field', ['name', 'transform_ops', 'check_ops', 'required', 'default', 'ignore_if', 'priority'])
     check = namedtuple('Check', ['name', 'op'])
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.fields = []
         self.checks = []
         self.errors = []
@@ -26,8 +30,11 @@ class ReqParser(object):
 
         for field in sorted(self.fields, key=lambda field: field.priority):
             if field.name in args and args[field.name]:
-                #TODO: manage exceptions and errors raised by external callback
-                parsed_req[field.name] = reduce(lambda x, y: y(x), field.transform_ops, args[field.name])
+                try:
+                    parsed_req[field.name] = reduce(lambda x, y: y(x), field.transform_ops, args[field.name])
+                except Exception as e:
+                    self.log_error(field.name, '{0} - {1}'.format(e.__class__.__name__, e.message))
+                    break
             else:
                 if field.default is not None:
                     parsed_req[field.name] = field.default
