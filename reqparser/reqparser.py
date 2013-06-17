@@ -2,6 +2,15 @@
 from collections import namedtuple
 
 
+def apply_op(args, op):
+    try:
+        op = getattr(args, op)
+    except AttributeError, TypeError:
+        pass
+    finally:
+        return op()
+
+
 class ReqParser(object):
     field = namedtuple('Field', ['name', 'transform_ops', 'check_ops', 'required', 'default', 'ignore_if', 'priority'])
     check = namedtuple('Check', ['name', 'op'])
@@ -30,12 +39,11 @@ class ReqParser(object):
 
         for field in sorted(self.fields, key=lambda field: field.priority):
             if field.name in args and args[field.name]:
-                # TODO
-                # Introdurre la possibilita di passare una singola callback invece di una lista:
-                # http://stackoverflow.com/questions/624926/how-to-detect-whether-a-python-variable-is-a-function
-                # Introdurre la possibilità di chiamare funzioni membro (es, str.lower()). Usare hasattr/getattr
                 try:
-                    parsed_req[field.name] = reduce(lambda x, y: y(x), field.transform_ops, args[field.name])
+                    if isinstance(field.transform_ops, list):
+                        parsed_req[field.name] = reduce(apply_op, field.transform_ops, args[field.name])
+                    else:
+                        apply_op(args[field.name], field.transform_ops)
                 except Exception as e:
                     self.log_error(field.name, '{0} - {1}'.format(e.__class__.__name__, e.message))
                     break
@@ -47,8 +55,8 @@ class ReqParser(object):
                 elif field.required:
                     self.log_error(field.name, 'Required field not found or empty')
 
-            if not all(op(args[field.name]) for op in field.ops):
-                self.log_error(field.name, 'Check on field failed')
+           # if not all(op(args[field.name]) for op in field.check_ops):
+            #    self.log_error(field.name, 'Check on field failed')
 
         for check in self.checks:
             if not check.op(parsed_req):

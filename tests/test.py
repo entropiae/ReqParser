@@ -25,7 +25,7 @@ class ParserTest(unittest.TestCase):
     def setUp(self):
         r = reqparser.ReqParser()
         r.add_field('cat', transform_ops=[int], check_ops=[in_range])
-        r.add_field('type', transform_ops='lower', check_ops=in_type_lst, priority=40)
+        r.add_field('type', transform_ops=[lower], check_ops=in_type_lst, priority=40)
         r.add_field('start_month', transform_ops=int, check_ops=month_check, ignore_if=ignore_months)
         r.add_field('end_month', transform_ops=int, check_ops=month_check)
         r.add_field('percentage', transform_ops=int, check_ops=perc_check)
