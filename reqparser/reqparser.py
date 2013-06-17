@@ -1,6 +1,6 @@
+ # -*- coding: utf-8 -*-
 from collections import namedtuple
 
-a = 1
 
 class ReqParser(object):
     field = namedtuple('Field', ['name', 'transform_ops', 'check_ops', 'required', 'default', 'ignore_if', 'priority'])
@@ -14,7 +14,7 @@ class ReqParser(object):
         self.checks = []
         self.errors = []
 
-    def add_fields(self, name, transform_ops=[], check_ops=[], required=True, default=None, ignore_if=None, priority=50):
+    def add_field(self, name, transform_ops=[], check_ops=[], required=True, default=None, ignore_if=None, priority=50):
         self.fields.append(ReqParser.field(name, transform_ops, check_ops, required, default, ignore_if, priority))
 
     def add_check(self, name, op):
@@ -30,6 +30,10 @@ class ReqParser(object):
 
         for field in sorted(self.fields, key=lambda field: field.priority):
             if field.name in args and args[field.name]:
+                # TODO
+                # Introdurre la possibilita di passare una singola callback invece di una lista:
+                # http://stackoverflow.com/questions/624926/how-to-detect-whether-a-python-variable-is-a-function
+                # Introdurre la possibilità di chiamare funzioni membro (es, str.lower()). Usare hasattr/getattr
                 try:
                     parsed_req[field.name] = reduce(lambda x, y: y(x), field.transform_ops, args[field.name])
                 except Exception as e:
