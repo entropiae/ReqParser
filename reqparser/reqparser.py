@@ -1,6 +1,5 @@
  # -*- coding: utf-8 -*-
 from collections import namedtuple
-import pdb
 
 
 def apply_op(args, op):
@@ -48,6 +47,7 @@ class ReqParser(object):
                         parsed_req[field.name] = apply_op(args[field.name], field.transform_ops)
                 except Exception as e:
                     self.log_error(field.name, '{0} - {1}'.format(e.__class__.__name__, e.message))
+                    continue
             else:
                 if field.default is not None:
                     parsed_req[field.name] = field.default
@@ -55,6 +55,7 @@ class ReqParser(object):
                     pass
                 elif field.required:
                     self.log_error(field.name, 'Required field not found or empty')
+                    continue
 
             try:
                 if hasattr(field.check_ops, '__call__'):
@@ -64,7 +65,7 @@ class ReqParser(object):
                 if not is_valid:
                     self.log_error(field.name, 'Check on field failed')
             except Exception as e:
-                print e
+                self.log_error(field.name, '{0} - Check on field failed'.format(e.__class__.__name__, e.message))
 
         for check in self.checks:
             if not check.op(parsed_req):
