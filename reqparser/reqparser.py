@@ -1,14 +1,16 @@
  # -*- coding: utf-8 -*-
 from collections import namedtuple
+import pdb
 
 
 def apply_op(args, op):
-    try:
-        op = getattr(args, op)
-    except AttributeError, TypeError:
-        pass
-    finally:
-        return op()
+    if hasattr(op, '__call__'):
+        ret_value = op(args)
+    elif isinstance(op, basestring) and hasattr(args, op):
+        ret_value = getattr(args, op)()
+    else:
+        raise AttributeError('Unsupported Operation: {0}'.format(op))
+    return ret_value
 
 
 class ReqParser(object):
@@ -43,10 +45,9 @@ class ReqParser(object):
                     if isinstance(field.transform_ops, list):
                         parsed_req[field.name] = reduce(apply_op, field.transform_ops, args[field.name])
                     else:
-                        apply_op(args[field.name], field.transform_ops)
+                        parsed_req[field.name] = apply_op(args[field.name], field.transform_ops)
                 except Exception as e:
                     self.log_error(field.name, '{0} - {1}'.format(e.__class__.__name__, e.message))
-                    break
             else:
                 if field.default is not None:
                     parsed_req[field.name] = field.default
@@ -55,12 +56,19 @@ class ReqParser(object):
                 elif field.required:
                     self.log_error(field.name, 'Required field not found or empty')
 
-           # if not all(op(args[field.name]) for op in field.check_ops):
-            #    self.log_error(field.name, 'Check on field failed')
+            try:
+                if hasattr(field.check_ops, '__call__'):
+                    is_valid = field.check_ops(parsed_req[field.name])
+                else:
+                    is_valid = all(op(parsed_req[field.name]) for op in field.check_ops)
+                if not is_valid:
+                    self.log_error(field.name, 'Check on field failed')
+            except Exception as e:
+                print e
 
         for check in self.checks:
             if not check.op(parsed_req):
-                self.log_error((check.name, 'Check failed'))
+                self.log_error(check.name, 'Check failed')
 
         if named:
             tpl = namedtuple('Request', parsed_req.keys())
